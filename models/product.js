@@ -42,9 +42,9 @@ ProductSchema.plugin(timestamps);
 ProductSchema.index({ createdAt: 1, updatedAt: 1 });
 
 ProductSchema.plugin(mongooseAlgolia, {
-  appId: "YTL735AQT8",
-  apiKey: "b2ea580efc532f0628015e8b2048d7a2",
-  indexName: "thrifthub", //The name of the index in Algolia, you can also pass in a function
+  appId: "E69WTTSMZF",
+  apiKey: "26fa38d2eef93164155c64ba76284a3d",
+  indexName: "products", //The name of the index in Algolia, you can also pass in a function
 });
 
 export const Product = mongoose.model("Product", ProductSchema);
