@@ -291,6 +291,13 @@ const resolvers = {
             thumbnail: url,
             label: _variant?.label,
             price: _variant?.price,
+            sale: {
+              startTime: null,
+              endTime: null,
+              salePrice: null,
+              percentOff: null,
+            },
+            available: true,
           };
           _variants?.push(variant);
         } else {
@@ -298,6 +305,13 @@ const resolvers = {
             thumbnail: null,
             label: _variant?.label,
             price: _variant?.price,
+            sale: {
+              startTime: null,
+              endTime: null,
+              salePrice: null,
+              percentOff: null,
+            },
+            available: true,
           };
           _variants?.push(variant);
         }
@@ -316,6 +330,70 @@ const resolvers = {
       return product;
     },
 
+    updateProduct: async (_, args) => {
+      console.log(args);
+      const {
+        variants,
+        additionalInformation,
+        name,
+        description,
+        id,
+        deleted,
+      } = args;
+
+      let _variants = [];
+
+      let variantsJS = JSON.parse(variants);
+      let additionalInformationJS = JSON.parse(additionalInformation);
+
+      for (let _variant of variantsJS) {
+        if (_variant?.thumbnail) {
+          let { url } = await cloudinary.v2.uploader.upload(
+            _variant?.thumbnail,
+            {
+              public_id: "",
+              folder: "thumbnails",
+            }
+          );
+          let variant = {
+            thumbnail: url,
+            label: _variant?.label,
+            price: _variant?.price,
+          };
+          _variants?.push(variant);
+        } else {
+          let variant = {
+            thumbnail: null,
+            label: _variant?.label,
+            price: _variant?.price,
+            sale: _variant?.sale,
+            available: _variant?.available,
+          };
+          _variants?.push(variant);
+        }
+      }
+
+      let update = {};
+
+      if (name) {
+        update = {
+          name,
+          description,
+          variants: _variants,
+          additionalInformation: additionalInformationJS,
+        };
+      }
+
+      if (deleted) {
+        update = {
+          deleted: true,
+        };
+      }
+
+      let _product = await Product.findByIdAndUpdate(args?.id, update);
+      return _product;
+    },
+
     createAdmin: async (_, args) => {
       let { name, email, levelClearance } = args;
 
@@ -323,7 +401,7 @@ const resolvers = {
         name,
         email,
         levelClearance,
-        password: "thrift",
+        password: "westgate",
       });
 
       let admin = newAdmin.save();

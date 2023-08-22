@@ -48,6 +48,13 @@ type Product {
     additionalInformation: [Additional]
     reviews: [Review]
     createdAt: String
+    deleted: Boolean
+}
+
+type Sale {
+    startTime: String
+    endTime: String
+    salePrice: Int  
 }
 
 type Additional {
@@ -59,6 +66,8 @@ type Variant {
     thumbnail: String
     price: Float
     label: String
+    sale: Sale
+    available: Boolean
 }
 
 type Order {
@@ -216,6 +225,16 @@ type Mutation {
         password: String
         removed: Boolean
     ): Admin
+    updateProduct(
+        id: ID
+        name: String
+        description: String
+        variants: String
+        additionalInformation: String  
+        available: Boolean
+        sale: String
+        deleted: Boolean
+    ): Product
 }
 
 `;

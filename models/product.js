@@ -15,6 +15,12 @@ export const ProductSchema = new Schema(
         price: Number,
         thumbnail: String,
         label: String,
+        available: { type: Boolean, default: true },
+        sale: {
+          startTime: String,
+          endTime: String,
+          salePrice: Number,
+        },
       },
     ],
     additionalInformation: [
@@ -31,6 +37,7 @@ export const ProductSchema = new Schema(
         message: String,
       },
     ],
+    deleted: { type: Boolean, default: false },
   },
   {
     collection: "products",
@@ -45,6 +52,8 @@ ProductSchema.plugin(mongooseAlgolia, {
   appId: "E69WTTSMZF",
   apiKey: "26fa38d2eef93164155c64ba76284a3d",
   indexName: "products", //The name of the index in Algolia, you can also pass in a function
+  selector:
+    "description id sale available category images variants deleted name createdAt additionalInformation",
 });
 
 export const Product = mongoose.model("Product", ProductSchema);
