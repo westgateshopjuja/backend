@@ -8,8 +8,11 @@ import {
 } from "./models/index.js";
 import cloudinary from "cloudinary";
 import { CourierClient } from "@trycourier/courier";
+import { Novu } from "@novu/node";
 import dotenv from "dotenv";
 dotenv.config();
+
+const novu = new Novu(process.env.NOVU_API_KEY);
 
 const courier = CourierClient({
   authorizationToken: process.env.COURIER_AUTH_TOKEN,
@@ -22,6 +25,20 @@ function omit(obj, ...props) {
   });
   return result;
 }
+
+const triggerNotification = async ({ name }) => {
+  const response = await novu
+    .trigger("on-boarding-notification-A72_hAYmG", {
+      to: {
+        subscriberId: process.env.NOVU_SUBSCRIBER_ID,
+      },
+      payload: {
+        name,
+      },
+    })
+    .catch((err) => console.error(err));
+  return response;
+};
 
 cloudinary.v2.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -576,6 +593,8 @@ const resolvers = {
               quantity: item.quantity,
             });
           }
+
+          await triggerNotification({ name: user?.name });
 
           await courier.send({
             message: {

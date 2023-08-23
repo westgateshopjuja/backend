@@ -11,6 +11,7 @@
   "type": "module",
   "dependencies": {
     "@apollo/server": "^4.8.1",
+    "@novu/node": "^0.18.0",
     "@trycourier/courier": "^4.7.0",
     "cloudinary": "^1.37.3",
     "cors": "^2.8.5",

@@ -147,6 +147,7 @@ type MovingProduct{
 
 
 type Query { 
+
     getProducts: [Product]
     getAdmins: [Admin]
     getProduct(id: ID): Product
