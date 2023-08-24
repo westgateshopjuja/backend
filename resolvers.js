@@ -10,7 +10,11 @@ import cloudinary from "cloudinary";
 import { CourierClient } from "@trycourier/courier";
 import { Novu } from "@novu/node";
 import dotenv from "dotenv";
+import algoliasearch from "algoliasearch";
 dotenv.config();
+
+const client = algoliasearch("E69WTTSMZF", "26fa38d2eef93164155c64ba76284a3d");
+const index = client.initIndex("products");
 
 const novu = new Novu(process.env.NOVU_API_KEY);
 
@@ -168,7 +172,9 @@ const resolvers = {
             ? orderWorths.reduce((sum, orderWorth) => sum + orderWorth)
             : 0;
 
-        statPage["totalProducts"] = (await Product.find()).length;
+        statPage["totalProducts"] = (
+          await Product.find({ deleted: false })
+        ).length;
 
         let last30Days = new Date();
         last30Days.setDate(last30Days.getDate() - 30);
@@ -344,11 +350,14 @@ const resolvers = {
       });
 
       let product = newProduct.save();
+      index.partialUpdateObject({
+        ...product,
+        objectID: args?.id,
+      });
       return product;
     },
 
     updateProduct: async (_, args) => {
-      console.log(args);
       const {
         variants,
         additionalInformation,
@@ -358,56 +367,66 @@ const resolvers = {
         deleted,
       } = args;
 
-      let _variants = [];
-
-      let variantsJS = JSON.parse(variants);
-      let additionalInformationJS = JSON.parse(additionalInformation);
-
-      for (let _variant of variantsJS) {
-        if (_variant?.thumbnail) {
-          let { url } = await cloudinary.v2.uploader.upload(
-            _variant?.thumbnail,
-            {
-              public_id: "",
-              folder: "thumbnails",
-            }
-          );
-          let variant = {
-            thumbnail: url,
-            label: _variant?.label,
-            price: _variant?.price,
-          };
-          _variants?.push(variant);
-        } else {
-          let variant = {
-            thumbnail: null,
-            label: _variant?.label,
-            price: _variant?.price,
-            sale: _variant?.sale,
-            available: _variant?.available,
-          };
-          _variants?.push(variant);
-        }
-      }
-
       let update = {};
 
       if (name) {
+        let _variants = [];
+
+        let variantsJS = JSON.parse(variants);
+        let additionalInformationJS = JSON.parse(additionalInformation);
+
+        for (let _variant of variantsJS) {
+          if (_variant?.thumbnail) {
+            let { url } = await cloudinary.v2.uploader.upload(
+              _variant?.thumbnail,
+              {
+                public_id: "",
+                folder: "thumbnails",
+              }
+            );
+            let variant = {
+              thumbnail: url,
+              label: _variant?.label,
+              price: _variant?.price,
+            };
+            _variants?.push(variant);
+          } else {
+            let variant = {
+              thumbnail: null,
+              label: _variant?.label,
+              price: _variant?.price,
+              sale: _variant?.sale,
+              available: _variant?.available,
+            };
+            _variants?.push(variant);
+          }
+        }
+
         update = {
           name,
           description,
           variants: _variants,
           additionalInformation: additionalInformationJS,
         };
-      }
-
-      if (deleted) {
+      } else if (deleted) {
         update = {
-          deleted: true,
+          ...omit(args, "id"),
         };
       }
 
+      console.log(update);
+
       let _product = await Product.findByIdAndUpdate(args?.id, update);
+
+      if (name) {
+        index.partialUpdateObject({
+          ...update,
+          objectID: args?.id,
+        });
+      } else if (deleted) {
+        index.deleteObject(args?.id);
+      }
+
       return _product;
     },
 

@@ -54,6 +54,7 @@ ProductSchema.plugin(mongooseAlgolia, {
   indexName: "products", //The name of the index in Algolia, you can also pass in a function
   selector:
     "description id sale available category images variants deleted name createdAt additionalInformation",
+  filter: (doc) => !doc.deleted,
 });
 
 export const Product = mongoose.model("Product", ProductSchema);
