@@ -6,7 +6,7 @@ import {
   Section,
   Transaction,
 } from "./models/index.js";
-import cloudinary from "cloudinary";
+
 import { CourierClient } from "@trycourier/courier";
 import { Novu } from "@novu/node";
 import dotenv from "dotenv";
@@ -43,12 +43,6 @@ const triggerNotification = async ({ name }) => {
     .catch((err) => console.error(err));
   return response;
 };
-
-cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 const resolvers = {
   User: {
@@ -287,43 +281,16 @@ const resolvers = {
         images,
       } = args;
 
-      let variantsJS = JSON.parse(variants);
-      let additionalInformationJS = JSON.parse(additionalInformation);
+      try {
+        let variantsJS = JSON.parse(variants);
+        let additionalInformationJS =
+          additionalInformation !== "[]"
+            ? JSON.parse(additionalInformation)
+            : null;
 
-      let _images = [];
-      let _variants = [];
+        let _variants = [];
 
-      for (let image of images) {
-        let { url } = await cloudinary.v2.uploader.upload(image, {
-          public_id: "",
-          folder: "products",
-        });
-        _images.push(url);
-      }
-
-      for (let _variant of variantsJS) {
-        if (_variant?.thumbnail) {
-          let { url } = await cloudinary.v2.uploader.upload(
-            _variant?.thumbnail,
-            {
-              public_id: "",
-              folder: "thumbnails",
-            }
-          );
-          let variant = {
-            thumbnail: url,
-            label: _variant?.label,
-            price: _variant?.price,
-            sale: {
-              startTime: null,
-              endTime: null,
-              salePrice: null,
-              percentOff: null,
-            },
-            available: true,
-          };
-          _variants?.push(variant);
-        } else {
+        for (let _variant of variantsJS) {
           let variant = {
             thumbnail: null,
             label: _variant?.label,
@@ -332,29 +299,42 @@ const resolvers = {
               startTime: null,
               endTime: null,
               salePrice: null,
-              percentOff: null,
             },
             available: true,
           };
           _variants?.push(variant);
         }
+
+        let newProduct = new Product({
+          name,
+          description,
+          category,
+          variants: variantsJS,
+          additionalInformation: additionalInformationJS,
+          images: [...images],
+        });
+
+        console.log({
+          name,
+          description,
+          category,
+          variants: variantsJS,
+          additionalInformation: additionalInformationJS,
+          images: [...images],
+        });
+
+        let product = await newProduct.save(); // Await the save operation
+
+        await index.partialUpdateObject({
+          ...product,
+          objectID: product?.id,
+        });
+
+        return product;
+      } catch (error) {
+        console.error(error);
+        throw new Error("An error occurred while adding the product"); // Re-throw the error
       }
-
-      let newProduct = new Product({
-        name,
-        description,
-        category,
-        variants: _variants,
-        additionalInformation: additionalInformationJS,
-        images: _images,
-      });
-
-      let product = newProduct.save();
-      index.partialUpdateObject({
-        ...product,
-        objectID: args?.id,
-      });
-      return product;
     },
 
     updateProduct: async (_, args) => {
@@ -376,30 +356,14 @@ const resolvers = {
         let additionalInformationJS = JSON.parse(additionalInformation);
 
         for (let _variant of variantsJS) {
-          if (_variant?.thumbnail) {
-            let { url } = await cloudinary.v2.uploader.upload(
-              _variant?.thumbnail,
-              {
-                public_id: "",
-                folder: "thumbnails",
-              }
-            );
-            let variant = {
-              thumbnail: url,
-              label: _variant?.label,
-              price: _variant?.price,
-            };
-            _variants?.push(variant);
-          } else {
-            let variant = {
-              thumbnail: null,
-              label: _variant?.label,
-              price: _variant?.price,
-              sale: _variant?.sale,
-              available: _variant?.available,
-            };
-            _variants?.push(variant);
-          }
+          let variant = {
+            thumbnail: null,
+            label: _variant?.label,
+            price: _variant?.price,
+            sale: _variant?.sale,
+            available: _variant?.available,
+          };
+          _variants?.push(variant);
         }
 
         update = {

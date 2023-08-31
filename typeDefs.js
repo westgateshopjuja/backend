@@ -163,6 +163,7 @@ type Query {
 }
 
 type Mutation {
+
     addProduct(
         name: String
         description: String
